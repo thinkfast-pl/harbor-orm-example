@@ -1,0 +1,136 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.0'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'io.harbor'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+}
+
+repositories {
+    mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-h2console'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-liquibase'
+	implementation 'com.google.code.gson:gson'
+
+    implementation 'io.harbor:harbor-orm-core:0.0.1-SNAPSHOT'
+    implementation 'io.harbor:harbor-orm-postgres:0.0.1-SNAPSHOT'
+    implementation 'io.harbor:harbor-orm-mariadb:0.0.1-SNAPSHOT'
+    implementation 'io.harbor:harbor-orm-mysql:0.0.1-SNAPSHOT'
+    implementation 'io.harbor:harbor-orm-h2:0.0.1-SNAPSHOT'
+
+	compileOnly 'org.projectlombok:lombok'
+
+	annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor "io.harbor:harbor-orm-model-gen:0.0.1-SNAPSHOT"
+
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
+	runtimeOnly 'com.h2database:h2'
+	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+	testImplementation 'org.testcontainers:testcontainers-postgresql'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+testing {
+	suites {
+		testPostgres(JvmTestSuite) {
+			sources {
+				java { srcDirs = ['src/test-postgres/java'] }
+				resources { srcDirs = ['src/test-postgres/resources'] }
+			}
+			dependencies {
+				implementation project()
+				implementation 'io.harbor:harbor-orm-api:0.0.1-SNAPSHOT'
+				implementation 'io.harbor:harbor-orm-core:0.0.1-SNAPSHOT'
+				implementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+				implementation 'org.springframework.boot:spring-boot-testcontainers'
+				implementation 'org.testcontainers:testcontainers-junit-jupiter'
+				implementation 'org.testcontainers:testcontainers-postgresql'
+				runtimeOnly 'org.junit.platform:junit-platform-launcher'
+				runtimeOnly 'org.postgresql:postgresql'
+			}
+		}
+		testMariadb(JvmTestSuite) {
+			sources {
+				java { srcDirs = ['src/test-mariadb/java'] }
+				resources { srcDirs = ['src/test-mariadb/resources'] }
+			}
+			dependencies {
+				implementation project()
+				implementation 'io.harbor:harbor-orm-api:0.0.1-SNAPSHOT'
+				implementation 'io.harbor:harbor-orm-core:0.0.1-SNAPSHOT'
+				implementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+				implementation 'org.springframework.boot:spring-boot-testcontainers'
+				implementation 'org.testcontainers:testcontainers-junit-jupiter'
+				implementation 'org.testcontainers:testcontainers-mariadb'
+				runtimeOnly 'org.junit.platform:junit-platform-launcher'
+				runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+			}
+		}
+		testMysql(JvmTestSuite) {
+			sources {
+				java { srcDirs = ['src/test-mysql/java'] }
+				resources { srcDirs = ['src/test-mysql/resources'] }
+			}
+			dependencies {
+				implementation project()
+				implementation 'io.harbor:harbor-orm-api:0.0.1-SNAPSHOT'
+				implementation 'io.harbor:harbor-orm-core:0.0.1-SNAPSHOT'
+				implementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+				implementation 'org.springframework.boot:spring-boot-testcontainers'
+				implementation 'org.testcontainers:testcontainers-junit-jupiter'
+				implementation 'org.testcontainers:testcontainers-mysql'
+				runtimeOnly 'org.junit.platform:junit-platform-launcher'
+				runtimeOnly 'com.mysql:mysql-connector-j'
+			}
+		}
+		testH2(JvmTestSuite) {
+			sources {
+				java { srcDirs = ['src/test-h2/java'] }
+				resources { srcDirs = ['src/test-h2/resources'] }
+			}
+			dependencies {
+				implementation project()
+				implementation 'io.harbor:harbor-orm-api:0.0.1-SNAPSHOT'
+				implementation 'io.harbor:harbor-orm-core:0.0.1-SNAPSHOT'
+				implementation 'org.springframework.boot:spring-boot-starter-data-jdbc-test'
+				runtimeOnly 'org.junit.platform:junit-platform-launcher'
+				runtimeOnly 'com.h2database:h2'
+			}
+		}
+	}
+}
+
+tasks.named('check') {
+	dependsOn(testing.suites.testPostgres, testing.suites.testMariadb, testing.suites.testMysql, testing.suites.testH2)
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs += [
+            "-Aio.harbor.tables.package=io.harbor.example.db",
+    ]
+}
